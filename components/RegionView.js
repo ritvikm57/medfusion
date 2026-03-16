@@ -8,8 +8,9 @@ import OutbreakMap from "./OutbreakMap";
 import TrendChart from "./TrendChart";
 
 export default function RegionView({ query, results, loading = false }) {
-  const whoRows = results?.who?.data || [];
-  const cdcRows = results?.cdc?.data || [];
+  const whoRows = (results?.who?.data || [])
+    .filter((row) => row?.Dim1 === "SEX_BTSX")
+    .sort((a, b) => Number(a?.TimeDim || 0) - Number(b?.TimeDim || 0));
   const activeDiseases = results?.activeDiseases || [];
   const mapRows = [...(results?.ecdc?.data || []), ...(results?.healthmap?.data || [])];
   const alerts = [...(results?.alerts?.data || []), ...(results?.flu?.data || [])].slice(0, 20);
@@ -40,7 +41,7 @@ export default function RegionView({ query, results, loading = false }) {
             <table className="w-full text-left text-slate-200">
               <thead className="text-xs uppercase text-slate-400">
                 <tr>
-                  <th className="py-2">Indicator</th>
+                  <th className="py-2">Life Expectancy (years)</th>
                   <th className="py-2">Year</th>
                   <th className="py-2">Value</th>
                 </tr>
@@ -48,9 +49,13 @@ export default function RegionView({ query, results, loading = false }) {
               <tbody>
                 {whoRows.slice(0, 40).map((row, index) => (
                   <tr key={`${row?.Id || "who"}-${index}`} className="border-t border-slate-800">
-                    <td className="py-2">{row?.Indicator || row?.IndicatorName || "Indicator"}</td>
+                    <td className="py-2">Life Expectancy</td>
                     <td className="py-2">{row?.TimeDim || "N/A"}</td>
-                    <td className="py-2">{row?.NumericValue || row?.Value || "N/A"}</td>
+                    <td className="py-2">
+                      {Number.isFinite(Number(row?.NumericValue))
+                        ? Number(row.NumericValue).toFixed(1)
+                        : row?.Value || "N/A"}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -62,7 +67,15 @@ export default function RegionView({ query, results, loading = false }) {
       </div>
 
       <OutbreakMap data={mapRows} loading={loading} />
-      <TrendChart title="Regional Trend" data={cdcRows} loading={loading} />
+      <TrendChart
+        title="Regional Trend"
+        data={whoRows}
+        loading={loading}
+        xKey="TimeDim"
+        yKey="NumericValue"
+        lineName="Life Expectancy"
+        ascending
+      />
       <AlertFeed title="Regional Alerts" items={alerts} loading={loading} />
     </section>
   );

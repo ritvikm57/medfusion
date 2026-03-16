@@ -8,6 +8,12 @@ import GeneNetwork from "./GeneNetwork";
 import OutbreakMap from "./OutbreakMap";
 import TrendChart from "./TrendChart";
 
+const COVID_ALIASES = new Set(["covid", "covid-19", "coronavirus", "sars-cov-2"]);
+
+function isCovidQuery(value) {
+  return COVID_ALIASES.has(String(value || "").trim().toLowerCase());
+}
+
 function ValueCard({ label, value }) {
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-4">
@@ -23,39 +29,81 @@ function DataUnavailable() {
 
 export default function DiseaseView({ query, results, loading = false }) {
   const diseaseStats = results?.disease?.data;
-  const classification = results?.classify?.data || [];
+  const ontologyHit = results?.classify?.ontology?.[0] || null;
+  const meshIds = results?.classify?.mesh?.ids || [];
   const genes = results?.genes?.data || [];
   const drugs = results?.drugs?.data || [];
   const alerts = [...(results?.alerts?.data || []), ...(results?.flu?.data || [])].slice(0, 20);
   const mapRows = [...(results?.ecdc?.data || []), ...(results?.healthmap?.data || [])];
+
+  const indiaCovid = results?.india?.covidCurrent || null;
+  const covidSearch = isCovidQuery(query?.diseaseCanonical || query?.disease);
+  const indiaDiseaseFallback = !diseaseStats && query?.region?.toLowerCase() === "india" && covidSearch ? indiaCovid : null;
+  const showDiseaseShCoverageNotice = !diseaseStats && !indiaDiseaseFallback && !loading;
+
+  const casesLabel = indiaDiseaseFallback ? "COVID-19 Cases (India)" : "Cases";
+  const deathsLabel = indiaDiseaseFallback ? "COVID-19 Deaths (India)" : "Deaths";
+  const activeLabel = indiaDiseaseFallback ? "COVID-19 Active (India)" : "Active";
+
+  const mapMarker =
+    query?.disease && query?.region?.toLowerCase() === "india"
+      ? {
+          lat: 20,
+          lng: 77,
+          label: `${query?.disease}: ${indiaCovid?.cases ?? "N/A"} COVID-19 cases`,
+        }
+      : null;
 
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-bold text-cyan-100">Disease Mode: {query?.disease}</h2>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <ValueCard label="Cases" value={diseaseStats?.cases || diseaseStats?.todayCases || "N/A"} />
-        <ValueCard label="Deaths" value={diseaseStats?.deaths || diseaseStats?.todayDeaths || "N/A"} />
-        <ValueCard label="Recovered" value={diseaseStats?.recovered || "N/A"} />
+        <ValueCard
+          label={casesLabel}
+          value={
+            diseaseStats?.cases || diseaseStats?.todayCases || indiaDiseaseFallback?.cases || "N/A"
+          }
+        />
+        <ValueCard
+          label={deathsLabel}
+          value={
+            diseaseStats?.deaths || diseaseStats?.todayDeaths || indiaDiseaseFallback?.deaths || "N/A"
+          }
+        />
+        <ValueCard label={activeLabel} value={diseaseStats?.active || indiaDiseaseFallback?.active || "N/A"} />
       </div>
+
+      {showDiseaseShCoverageNotice ? (
+        <p className="rounded-xl border border-amber-500/30 bg-amber-900/20 p-3 text-sm text-amber-200">
+          Global surveillance data not available for {query?.disease || "this disease"} via Disease.sh (COVID-19 only source).
+        </p>
+      ) : null}
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
         <h3 className="mb-3 text-lg font-semibold text-cyan-200">ICD-10 Classification</h3>
-        {classification.length ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            {classification.map((item, index) => (
-              <div key={`${item?.code || "code"}-${index}`} className="rounded-xl bg-slate-950/70 p-3">
-                <p className="text-sm font-semibold text-slate-100">{item?.term || "Unknown term"}</p>
-                <p className="text-xs text-cyan-300">{item?.code || "No code"}</p>
+        {ontologyHit ? (
+          <div className="space-y-3">
+            <div className="rounded-xl bg-slate-950/70 p-3">
+              <p className="text-sm font-semibold text-slate-100">{ontologyHit?.name || "Unknown disease"}</p>
+              <p className="mt-1 text-xs text-slate-300">{ontologyHit?.description || "No description available."}</p>
+            </div>
+            {meshIds.length ? (
+              <div className="flex flex-wrap gap-2">
+                {meshIds.map((id) => (
+                  <span key={id} className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-semibold text-cyan-200">
+                    {id}
+                  </span>
+                ))}
               </div>
-            ))}
+            ) : null}
           </div>
         ) : (
           <DataUnavailable />
         )}
       </div>
 
-      <OutbreakMap data={mapRows} loading={loading} />
+      <OutbreakMap data={mapRows} loading={loading} forcedMarker={mapMarker} />
       <TrendChart title="Disease Trend" data={results?.ecdc?.data || []} loading={loading} />
       <AlertFeed title="Global Alerts" items={alerts} loading={loading} />
 

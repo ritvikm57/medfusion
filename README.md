@@ -1,314 +1,195 @@
-# MedFusion
+# MedFusion — Disease Surveillance Dashboard
 
-MedFusion is a live, multi-source disease surveillance dashboard built with Next.js (App Router).
-It lets users search by disease, region, or both, then aggregates epidemiology signals, public-health alerts,
-classification data, and translational biomedical context into a single view.
+## Overview
+MedFusion is a multi-source disease surveillance dashboard that combines epidemiological signals, public-health alerts, disease ontology, genomic associations, and drug insights into a unified workflow.
 
-The app is designed to stay resilient under partial source failures by using source-level fault tolerance
-and aggregation via settled promises.
+The platform solves a practical surveillance challenge: outbreak intelligence and biomedical context are usually scattered across disconnected data portals and APIs. MedFusion normalizes those heterogeneous feeds into one query-driven interface.
 
-## What MedFusion Does
+This project was built for **MedFusion Hackfest 2026 at Mahindra University**.
 
-- Aggregates real-time and near-real-time public health data from multiple external sources.
-- Supports three query modes:
-	- Disease mode (disease only)
-	- Region mode (region only)
-	- Combined mode (disease + region)
-- Enriches searches with:
-	- ICD-10 classification suggestions
-	- Gene associations (Open Targets)
-	- Candidate drug metadata (PubChem)
-- Visualizes outputs as:
-	- Outbreak map (Leaflet)
-	- Trend chart (Recharts)
-	- Alert feed cards
-	- Disease-gene-drug force graph
+## Live Demo
+[placeholder for Vercel URL]
 
 ## Tech Stack
 
-- Framework: Next.js 15 (App Router)
-- Runtime UI: React 19
-- Styling: Tailwind CSS v4
-- Mapping: Leaflet + React Leaflet
-- Charting: Recharts
-- Graph visualization: react-force-graph-2d
-- Parsing/utilities:
-	- xml2js (RSS/XML)
-	- cheerio (HTML scraping)
-	- papaparse (CSV)
+From `package.json`:
 
-## Project Structure
+- `next@^15.5.12`
+- `react@19.2.3`
+- `react-dom@19.2.3`
+- `tailwindcss@^4`
+- `@tailwindcss/postcss@^4`
+- `leaflet@^1.9.4`
+- `react-leaflet@^5.0.0`
+- `recharts@^3.8.0`
+- `react-force-graph@^1.48.2`
+- `react-force-graph-2d@^1.29.1`
+- `xml2js@^0.6.2`
+- `cheerio@^1.2.0`
+- `papaparse@^5.5.3`
+- `eslint@^9`
+- `eslint-config-next@^15.5.12`
+- `babel-plugin-react-compiler@1.0.0`
 
-```text
-app/
-	page.js                      # Main query/search experience
-	layout.js                    # Fonts + global layout metadata
-	globals.css                  # Global styling
-	disease/[name]/page.js       # Deep-link disease page
-	region/[name]/page.js        # Deep-link region page
-	api/
-		search/route.js            # Master aggregator endpoint
-		utils.js                   # Shared helpers for all routes
-		disease/route.js           # disease.sh adapter
-		who/route.js               # WHO GHO adapter
-		alerts/route.js            # ProMED RSS adapter
-		flu/route.js               # CDC FluView RSS adapter
-		cdc/route.js               # CDC Open Data adapter
-		ecdc/route.js              # ECDC adapter
-		healthmap/route.js         # HealthMap scraper adapter
-		uk/route.js                # UK ONS dataset discovery adapter
-		classify/route.js          # ICD-10 route (NLM Clinical Tables)
-		genes/route.js             # Open Targets GraphQL adapter
-		drugs/route.js             # PubChem adapter
-		india/route.js             # IHME India CSV adapter (conditional)
-components/
-	SearchBar.js
-	DiseaseView.js
-	RegionView.js
-	BothView.js
-	OutbreakMap.js
-	TrendChart.js
-	AlertFeed.js
-	GeneNetwork.js
+## Data Sources
+
+Note: the prompt asks for 11 sources, but the listed set contains 12; all listed sources are documented below.
+
+| Source | What It Provides | Access Method | Endpoint Used | Status |
+|---|---|---|---|---|
+| CDC Open Data Portal | Tabular disease surveillance records | REST JSON (Socrata) | `https://data.cdc.gov/resource/x9gk-5huc.json` | Active |
+| Disease.sh | Global and country COVID-19 case/death/active snapshots | REST JSON | `https://disease.sh/v3/covid-19/all` and `https://disease.sh/v3/covid-19/countries/{region}` | Active (COVID-focused only) |
+| WHO GHO OData API | Country-level public health indicators (life expectancy used in UI) | REST JSON (OData) | `https://ghoapi.azureedge.net/api/{indicator}?$filter=SpatialDim eq '{ISO3}'` | Active |
+| CDC FluView (via Delphi CMU Epidata API) | Weekly influenza-like illness surveillance | REST JSON | `https://api.delphi.cmu.edu/epidata/fluview/?regions=...&epiweeks=...` | Active |
+| HealthMap | Outbreak/news signal feed | RSS in `alerts` route + HTML scrape route | `https://healthmap.org/feed/` and `https://healthmap.org/en/` | Active |
+| ProMED Mail (PAYWALLED) | Originally intended rapid outbreak alerts | N/A (substituted) | Replaced in code path by WHO RSS feed | **Substituted** |
+| IHME GHDx India (CSV unavailable) | Originally intended India burden CSV feed | N/A (substituted) | Replaced by OpenDengue CSV + Disease.sh India COVID endpoint | **Substituted** |
+| ECDC Databases | Case distribution data for regional epidemiological context | REST JSON | `https://opendata.ecdc.europa.eu/covid19/casedistribution/json/` | Active (with timeout guard) |
+| UK Gov Health Statistics (UKHSA Dashboard API) | COVID and influenza metrics for UK geographies | REST JSON | `https://api.ukhsa-dashboard.data.gov.uk/themes/infectious_disease/...` | Active |
+| Open Targets | Disease-target genomic associations | GraphQL | `https://api.platform.opentargets.org/api/v4/graphql` | Active |
+| PubChem PUG-REST | Drug compound metadata (CID, molecular formula) | REST JSON | `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/{drug}/JSON` | Active |
+| NCBI MeSH | Disease classification identifiers | REST JSON | `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=mesh&term={disease}&retmode=json&retmax=5` | Active |
+
+### Substitution Notes
+
+- **ProMED replacement**: ProMED access constraints/paywall made it unsuitable for stable hackathon ingestion; alerts route now uses WHO Disease Outbreak News RSS plus HealthMap feed.
+- **IHME replacement**: IHME CSV availability was unreliable; India route now combines OpenDengue historical rows and Disease.sh India current COVID metrics.
+
+## API Routes
+
+All routes are `GET` under `app/api`.
+
+| Route | Method | Parameters | What It Returns | Source |
+|---|---|---|---|---|
+| `/api/search` | GET | `disease?`, `region?` | Unified multi-source response envelope with `mode`, `query`, `timestamp`, `results` | Internal aggregator over all routes |
+| `/api/alerts` | GET | `disease?`, `region?` | Filtered/fallback alert items with title/link/date/description/source | WHO RSS + HealthMap RSS |
+| `/api/cdc` | GET | `disease?`, `region?` | Filtered CDC rows matching keyword strategy | CDC Open Data |
+| `/api/classify` | GET | `disease` (required) | `mesh.ids` + `ontology` hits | NCBI MeSH + Open Targets search |
+| `/api/disease` | GET | `disease?`, `region?` | COVID global/country stats; non-COVID returns `data: null` with note | Disease.sh |
+| `/api/drugs` | GET | `disease?` | Candidate drug metadata array | PubChem |
+| `/api/ecdc` | GET | `region?` | Filtered ECDC records (capped) | ECDC |
+| `/api/flu` | GET | `disease?`, `region?` | FluView weekly data for current epiweek range | Delphi CMU Epidata / CDC FluView |
+| `/api/genes` | GET | `disease?` | Top associated genes and scores | Open Targets |
+| `/api/healthmap` | GET | `disease?`, `region?` | Scraped outbreak title/link entries | HealthMap website |
+| `/api/india` | GET | `disease?` | `dengueHistorical` + `covidCurrent` India bundle | OpenDengue + Disease.sh India |
+| `/api/uk` | GET | `disease?`, `region?` | UKHSA COVID/Influenza metric datasets | UKHSA Dashboard API |
+| `/api/who` | GET | `region?`, `indicator?` | WHO indicator values filtered by ISO3 country | WHO GHO OData |
+
+## Query Modes
+
+`/api/search` supports three modes and determines the frontend view layer:
+
+1. Disease only: `?disease=dengue`
+- Returns disease-centric bundle: classification, genes, drugs, alerts, and disease/global context.
+
+2. Region only: `?region=India`
+- Returns region-centric bundle: WHO indicators, regional alerts, map/trend context, and active disease candidates.
+
+3. Both: `?disease=dengue&region=India`
+- Returns unified disease+region response combining disease enrichment and region-specific surveillance in one payload.
+
+## Components A-E
+
+### A. Disease Classification
+- Implemented via `/api/classify`.
+- Uses NCBI MeSH IDs and ontology hits from Open Targets.
+- Frontend shows ontology name/description and badge list of MeSH IDs.
+
+### B. Epidemiological Surveillance
+- Implemented via `/api/cdc`, `/api/who`, `/api/ecdc`, `/api/flu`, `/api/alerts`, `/api/healthmap`, `/api/uk`, `/api/india`.
+- Aggregated through `/api/search` using `Promise.allSettled` for resilient partial success.
+
+### C. Genomic Associations
+- Implemented via `/api/genes` using Open Targets GraphQL.
+- Frontend shows top genes and scores plus network relationships.
+
+### D. Therapeutic Insights
+- Implemented via `/api/drugs` using disease-to-drug mapping and PubChem compound lookup.
+- Frontend renders candidate drugs with CID and molecular formula.
+
+### E. Visual Intelligence Layer
+- Map: `OutbreakMap` (Leaflet / React-Leaflet)
+- Trend: `TrendChart` (Recharts)
+- Alerts: `AlertFeed`
+- Relationship Graph: `GeneNetwork` (react-force-graph-2d)
+
+## Architecture
+
+Pipeline:
+
+`User Query -> /api/search -> Promise.allSettled across source adapters -> unified JSON response -> frontend mode components`
+
+Design properties:
+
+- Source-level fault isolation: one failed source does not fail the whole request.
+- Shared normalization helpers in `app/api/utils.js`.
+- Keyword and alias matching for disease/region harmonization.
+
+## Setup & Running Locally
+
+1. Clone repository
+
+```bash
+git clone <your-repo-url>
+cd medfusion
 ```
 
-## Local Development
-
-### Prerequisites
-
-- Node.js 18.18+ (Node 20+ recommended)
-- npm 9+ (or equivalent package manager)
-
-### Install
+2. Install dependencies
 
 ```bash
 npm install
 ```
 
-### Run
+3. Start dev server
 
 ```bash
 npm run dev
 ```
 
-Open http://localhost:3000.
+4. Open app
 
-### Build and Start
+`http://localhost:3000`
 
-```bash
-npm run build
-npm run start
-```
+## Deployment
 
-### Lint
+Deploy to Vercel:
 
-```bash
-npm run lint
-```
+1. Push repository to GitHub.
+2. Import project in Vercel dashboard.
+3. Framework should auto-detect as Next.js.
+4. Build command: `npm run build` (default).
+5. Output mode: Next.js default.
+6. Deploy and attach custom domain if needed.
 
-## Query Model
+## Challenges & Solutions
 
-The frontend sends user input to the aggregator endpoint:
+1. ProMED paywalled
+- Challenge: unstable/non-open access for hackathon-grade ingestion.
+- Solution: replaced with WHO Disease Outbreak News RSS and HealthMap feed inside alerts pipeline.
 
-- GET /api/search?disease=<value>&region=<value>
+2. IHME CSV 404 / availability issues
+- Challenge: India CSV source unreliable for live ingestion.
+- Solution: replaced India pipeline with OpenDengue historical CSV + Disease.sh India COVID snapshot.
 
-Supported behavior:
+3. ECDC timeout
+- Challenge: large ECDC dataset caused long/hanging fetch behavior.
+- Solution: added explicit AbortController timeout (20s in ECDC route) and timeout-enabled shared fetch utilities.
 
-- If only disease is set: mode = disease
-- If only region is set: mode = region
-- If both are set: mode = both
-- If neither is set: returns HTTP 400 with a structured validation error
+4. ICD-10 NLM API returning empty/inconsistent matches
+- Challenge: disease classification quality/availability issues with original ICD-only approach.
+- Solution: shifted classification layer to NCBI MeSH IDs + Open Targets ontology hits for robust non-empty outputs.
 
-The aggregator canonicalizes disease terms, fans out to source routes, and returns a unified result envelope.
+## Future Scope
 
-## Aggregator Response Shape
+- Real-time websocket updates for alert streams and trend refresh
+- Expanded disease-to-drug mapping coverage beyond current seeded set
+- ML-based outbreak risk prediction and anomaly scoring
+- Mobile application experience for field/public-health operators
+- User accounts with saved searches, watchlists, and notifications
+- Deeper direct genomic integrations (for example OMIM and additional variant resources)
 
-```json
-{
-	"mode": "disease | region | both | invalid",
-	"query": {
-		"disease": "raw user input",
-		"diseaseCanonical": "canonical disease",
-		"region": "raw region"
-	},
-	"timestamp": "ISO string",
-	"results": {
-		"disease": {},
-		"who": {},
-		"alerts": {},
-		"flu": {},
-		"cdc": {},
-		"ecdc": {},
-		"healthmap": {},
-		"uk": {},
-		"classify": {},
-		"genes": {},
-		"drugs": {},
-		"india": {},
-		"activeDiseases": []
-	}
-}
-```
-
-Notes:
-
-- india appears only when region equals India.
-- activeDiseases is derived from CDC tabular rows for region and both modes.
-- Any individual source can fail without breaking the entire response.
-
-## API Endpoints
-
-All endpoints are GET routes under /api.
-
-### Core Aggregation
-
-| Endpoint | Purpose | Parameters |
-|---|---|---|
-| /api/search | Master orchestration endpoint; fans out to source adapters and merges responses | disease (optional), region (optional) |
-
-### Source Adapters
-
-| Endpoint | External Source | Purpose | Parameters |
-|---|---|---|---|
-| /api/disease | disease.sh | COVID-oriented global/country stats | disease, region |
-| /api/who | WHO GHO OData | Country health indicators by ISO3 code | region, indicator (optional) |
-| /api/alerts | ProMED RSS | Curated outbreak alert feed | disease, region |
-| /api/flu | CDC FluView RSS | Influenza bulletin feed | disease, region |
-| /api/cdc | CDC Open Data (Socrata) | Tabular surveillance records | disease, region |
-| /api/ecdc | ECDC | Case distribution records and trend context | region |
-| /api/healthmap | HealthMap | Scraped outbreak headlines/links | disease, region |
-| /api/uk | UK ONS API | UK dataset discovery relevant to terms | disease, region |
-| /api/classify | NLM Clinical Tables | ICD-10 term/code suggestions | disease |
-| /api/genes | Open Targets GraphQL | Disease-associated gene targets | disease |
-| /api/drugs | PubChem PUG-REST | Candidate drug metadata (CID/formula) | disease |
-| /api/india | IHME GHDx CSV | India-specific cause/burden rows | disease |
-
-## Data Normalization and Matching
-
-Shared helpers in app/api/utils.js provide normalization and resilient behavior:
-
-- Disease canonicalization using alias maps
-- Region to ISO3 conversion for WHO requests
-- Keyword matching across mixed payloads
-- Safe fetch wrappers with consistent no-store behavior
-- Consistent route-level error object construction
-
-Current disease alias examples include influenza/flu, covid-19/coronavirus,
-dengue, tuberculosis, and malaria.
-
-## UI Composition by Mode
-
-### Disease Mode
-
-- Summary cards (cases/deaths/recovered)
-- ICD-10 panel
-- Outbreak map and trend chart
-- Alert feed
-- Genes and drugs tables
-- Force-directed network graph
-
-### Region Mode
-
-- Active diseases chips (derived)
-- WHO indicators table
-- Outbreak map and regional trend chart
-- Regional alert feed
-
-### Combined Mode
-
-- Renders both disease and region modules
-- Adds India-specific table when region is India
-
-## Deep-Link Routes
-
-- /disease/[name]
-- /region/[name]
-
-These pages call the same /api/search endpoint and render the corresponding view components.
-
-## Fault Tolerance Model
-
-Resilience is a first-class behavior:
-
-- Aggregator uses Promise.allSettled for per-source isolation.
-- Source errors are preserved as structured payloads instead of throwing away the full response.
-- Several adapters return filtered results and fallback slices to avoid empty UIs when strict filtering yields zero matches.
-- UI components render graceful empty/placeholder states for unavailable modules.
-
-## Operational Notes
-
-- External source schemas can change without notice.
-- Some providers are rate-limited or intermittently unavailable.
-- /api/disease is intentionally COVID-centric when using disease.sh.
-- /api/healthmap is scrape-based and may require selector updates over time.
-- /api/india parses a large CSV and is only called conditionally to limit unnecessary work.
-
-## Extending MedFusion
-
-### Add a New Source Adapter
-
-1. Create app/api/<source>/route.js.
-2. Use helper utilities from app/api/utils.js for consistent matching and error behavior.
-3. Return a normalized JSON shape:
-	 - source
-	 - disease and/or region where relevant
-	 - data
-	 - optional note or error
-4. Register the endpoint in app/api/search/route.js fetchPlan.
-5. Surface in the relevant UI view component(s).
-
-### Add Disease Synonyms
-
-Update DISEASE_ALIAS_MAP in app/api/utils.js.
-
-### Add Region Code Mappings
-
-Update COUNTRY_CODE_MAP in app/api/utils.js.
-
-## Troubleshooting
-
-### No results in one panel
-
-- Check if that source endpoint is returning an error field.
-- Verify external API availability.
-- Relax disease/region input terms (especially for strict keyword filters).
-
-### WHO data missing
-
-- Confirm region is supplied.
-- Confirm ISO3 conversion exists or add mapping in COUNTRY_CODE_MAP.
-- Try a different WHO indicator query parameter.
-
-### Map has no markers
-
-- Many sources do not expose lat/lng consistently.
-- Marker extraction currently looks for common latitude/longitude key variants.
-
-### Graph appears sparse
-
-- Disease may not map to an Open Targets disease hit.
-- PubChem candidate list is disease-driven and may fall back to placeholder compounds.
-
-## Recommended Next Improvements
-
-- Add per-source timeout and retry strategy.
-- Introduce source health telemetry and status badges.
-- Add response caching policy with selective stale-while-revalidate behavior.
-- Add unit tests for utility normalization/matching functions.
-- Add integration tests for /api/search shape guarantees and mode handling.
-
-## Scripts
-
-```json
-{
-	"dev": "next dev",
-	"build": "next build",
-	"start": "next start",
-	"lint": "next lint"
-}
-```
+## Team
+[placeholder]
 
 ## License
-
-No license file is currently included in this repository.
-Add one if you plan to publish or distribute the project.
+MIT

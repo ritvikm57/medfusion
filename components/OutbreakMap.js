@@ -44,9 +44,21 @@ function derivePoints(rows = []) {
     .slice(0, 80);
 }
 
-export default function OutbreakMap({ data = [], loading = false }) {
+export default function OutbreakMap({ data = [], loading = false, forcedMarker = null }) {
   const [mapReady, setMapReady] = useState(false);
-  const points = useMemo(() => derivePoints(data), [data]);
+  const points = useMemo(() => {
+    if (forcedMarker?.lat != null && forcedMarker?.lng != null) {
+      return [
+        {
+          id: "forced-india-marker",
+          lat: Number(forcedMarker.lat),
+          lng: Number(forcedMarker.lng),
+          label: forcedMarker.label || "Outbreak marker",
+        },
+      ];
+    }
+    return derivePoints(data);
+  }, [data, forcedMarker]);
 
   useEffect(() => {
     let mounted = true;
