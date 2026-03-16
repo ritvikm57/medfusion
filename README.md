@@ -242,52 +242,13 @@ http://localhost:3000
 
 Pull requests welcome. For major changes, open an issue first describing the feature/fix.
 
-## License
-
-MIT
-
-`http://localhost:3000`
-
-## Deployment
-
-Deploy to Vercel:
-
-1. Push repository to GitHub.
-2. Import project in Vercel dashboard.
-3. Framework should auto-detect as Next.js.
-4. Build command: `npm run build` (default).
-5. Output mode: Next.js default.
-6. Deploy and attach custom domain if needed.
-
-## Challenges & Solutions
-
-1. ProMED paywalled
-- Challenge: unstable/non-open access for hackathon-grade ingestion.
-- Solution: replaced with WHO Disease Outbreak News RSS and HealthMap feed inside alerts pipeline.
-
-2. IHME CSV 404 / availability issues
-- Challenge: India CSV source unreliable for live ingestion.
-- Solution: replaced India pipeline with OpenDengue historical CSV + Disease.sh India COVID snapshot.
-
-3. ECDC timeout
-- Challenge: large ECDC dataset caused long/hanging fetch behavior.
-- Solution: added explicit AbortController timeout (20s in ECDC route) and timeout-enabled shared fetch utilities.
-
-4. ICD-10 NLM API returning empty/inconsistent matches
-- Challenge: disease classification quality/availability issues with original ICD-only approach.
-- Solution: shifted classification layer to NCBI MeSH IDs + Open Targets ontology hits for robust non-empty outputs.
-
-## Future Scope
-
-- Real-time websocket updates for alert streams and trend refresh
-- Expanded disease-to-drug mapping coverage beyond current seeded set
-- ML-based outbreak risk prediction and anomaly scoring
-- Mobile application experience for field/public-health operators
-- User accounts with saved searches, watchlists, and notifications
-- Deeper direct genomic integrations (for example OMIM and additional variant resources)
-
 ## Team
-[placeholder]
+
+- Ritvik Mittal (SE24UCSE225)
+- Charvi Bayana (SE24UCSE119)
+- TVNS Saicharan (SE25UCSE071)
+- Akanksha Duvvuri (SE25UCSE070)
 
 ## License
+
 MIT
