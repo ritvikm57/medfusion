@@ -6,6 +6,10 @@
 import AlertFeed from "./AlertFeed";
 import OutbreakMap from "./OutbreakMap";
 import TrendChart from "./TrendChart";
+import OutbreakTimeline from "./OutbreakTimeline";
+import FluChart from "./FluChart";
+import RecentResearch from "./RecentResearch";
+import SourceFooter from "./SourceFooter";
 
 export default function RegionView({ query, results, loading = false }) {
   const whoRows = (results?.who?.data || [])
@@ -18,6 +22,8 @@ export default function RegionView({ query, results, loading = false }) {
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-bold text-cyan-100">Region Mode: {query?.region}</h2>
+
+      <OutbreakTimeline title="Outbreak Alerts" items={alerts} loading={loading} />
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
         <h3 className="mb-3 text-lg font-semibold text-cyan-200">Active Diseases</h3>
@@ -76,7 +82,10 @@ export default function RegionView({ query, results, loading = false }) {
         lineName="Life Expectancy"
         ascending
       />
+      <FluChart data={results?.flu?.data} loading={loading} />
       <AlertFeed title="Regional Alerts" items={alerts} loading={loading} />
+      <RecentResearch papers={results?.pubmed?.data} loading={loading} />
+      <SourceFooter results={results} />
     </section>
   );
 }

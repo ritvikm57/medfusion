@@ -37,16 +37,31 @@ export async function GET(request) {
         const text = `${item?.title || ""} ${item?.description || ""}`;
         return combinedKeywordMatch(text, disease, region);
       })
-      .slice(0, 20)
-      .map((item) => ({
-        title: item?.title || "Untitled",
-        link: item?.link || null,
-        pubDate: item?.pubDate || null,
-        description: item?.description || "",
-        source: item._source,
-      }));
+      .slice(0, 20);
 
-    const fallback = allItems.slice(0, 20).map((item) => ({
+    // Fallback: if no results and both disease+region provided, try each separately
+    const byDisease = filtered.length === 0 && disease && region
+      ? allItems.filter((item) => {
+          const text = `${item?.title || ""} ${item?.description || ""}`;
+          return combinedKeywordMatch(text, disease, null);
+        }).slice(0, 20)
+      : [];
+
+    const byRegion = filtered.length === 0 && disease && region && byDisease.length === 0
+      ? allItems.filter((item) => {
+          const text = `${item?.title || ""} ${item?.description || ""}`;
+          return combinedKeywordMatch(text, null, region);
+        }).slice(0, 20)
+      : [];
+
+    const fallback = allItems.slice(0, 20);
+
+    const resultsToUse = filtered.length ? filtered
+      : byDisease.length ? byDisease
+      : byRegion.length ? byRegion
+      : fallback;
+
+    const data = resultsToUse.map((item) => ({
       title: item?.title || "Untitled",
       link: item?.link || null,
       pubDate: item?.pubDate || null,
@@ -58,7 +73,7 @@ export async function GET(request) {
       source: "alerts",
       disease: disease || null,
       region: region || null,
-      data: filtered.length ? filtered : fallback,
+      data,
     });
   } catch (error) {
     return NextResponse.json(buildError("alerts", error), { status: 500 });

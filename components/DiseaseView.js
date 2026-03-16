@@ -7,6 +7,10 @@ import AlertFeed from "./AlertFeed";
 import GeneNetwork from "./GeneNetwork";
 import OutbreakMap from "./OutbreakMap";
 import TrendChart from "./TrendChart";
+import OutbreakTimeline from "./OutbreakTimeline";
+import FluChart from "./FluChart";
+import RecentResearch from "./RecentResearch";
+import SourceFooter from "./SourceFooter";
 
 const COVID_ALIASES = new Set(["covid", "covid-19", "coronavirus", "sars-cov-2"]);
 
@@ -58,6 +62,8 @@ export default function DiseaseView({ query, results, loading = false }) {
     <section className="space-y-6">
       <h2 className="text-2xl font-bold text-cyan-100">Disease Mode: {query?.disease}</h2>
 
+      <OutbreakTimeline title="Outbreak Alerts" items={alerts} loading={loading} />
+
       <div className="grid gap-4 md:grid-cols-3">
         <ValueCard
           label={casesLabel}
@@ -106,6 +112,7 @@ export default function DiseaseView({ query, results, loading = false }) {
       <OutbreakMap data={mapRows} loading={loading} forcedMarker={mapMarker} />
       <TrendChart title="Disease Trend" data={results?.ecdc?.data || []} loading={loading} />
       <AlertFeed title="Global Alerts" items={alerts} loading={loading} />
+      <FluChart data={results?.flu?.data} loading={loading} />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
@@ -165,7 +172,11 @@ export default function DiseaseView({ query, results, loading = false }) {
         </div>
       </div>
 
+      <RecentResearch papers={results?.pubmed?.data} loading={loading} />
+
       <GeneNetwork disease={query?.disease} genes={genes} drugs={drugs} loading={loading} />
+
+      <SourceFooter results={results} />
     </section>
   );
 }

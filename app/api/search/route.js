@@ -2,7 +2,7 @@
 // Why: central endpoint composes all public data sources with Promise.allSettled so one failure never breaks the dashboard.
 
 import { NextResponse } from "next/server";
-import { canonicalizeDisease } from "../utils";
+import { canonicalizeDisease, getCached, setCached } from "../utils";
 
 function modeFromQuery(disease, region) {
   if (disease && region) return "both";
@@ -55,6 +55,10 @@ export async function GET(request) {
   const region = searchParams.get("region")?.trim() || null;
   const mode = modeFromQuery(disease, region);
 
+  const cacheKey = `${disease || ""}-${region || ""}`
+  const cached = getCached(cacheKey)
+  if (cached) return NextResponse.json({ ...cached, _cached: true })
+
   if (mode === "invalid") {
     return NextResponse.json(
       {
@@ -82,6 +86,7 @@ export async function GET(request) {
     ["classify", "/api/classify"],
     ["genes", "/api/genes"],
     ["drugs", "/api/drugs"],
+    ["pubmed", "/api/pubmed"],
   ];
 
   if (region?.toLowerCase() === "india") {
@@ -108,10 +113,12 @@ export async function GET(request) {
     results.activeDiseases = Array.from(diseaseCandidates.keys()).slice(0, 20);
   }
 
-  return NextResponse.json({
+  const responseData = {
     mode,
     query: { disease: diseaseRaw, diseaseCanonical: disease, region },
     timestamp: new Date().toISOString(),
     results,
-  });
+  }
+  setCached(cacheKey, responseData)
+  return NextResponse.json(responseData);
 }

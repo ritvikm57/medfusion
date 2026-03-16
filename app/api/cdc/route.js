@@ -11,19 +11,20 @@ export async function GET(request) {
 
   try {
     const rows = await safeJsonFetch(
-      "https://data.cdc.gov/resource/x9gk-5huc.json",
-      "cdc-open-data"
+      "https://opendata.ecdc.europa.eu/covid19/nationalcasedeath_eueea_daily_ei/json/",
+      "ecdc",
+      { timeoutMs: 20000 }
     );
 
     const filtered = (rows || []).filter((row) => combinedKeywordMatch(JSON.stringify(row), disease, region));
 
     return NextResponse.json({
-      source: "cdc-open-data",
+      source: "ecdc",
       disease: disease || null,
       region: region || null,
       data: filtered,
     });
   } catch (error) {
-    return NextResponse.json(buildError("cdc-open-data", error), { status: 500 });
+    return NextResponse.json({ source: "ecdc", data: [], note: "ECDC temporarily unavailable" });
   }
 }

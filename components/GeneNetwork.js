@@ -69,7 +69,7 @@ export default function GeneNetwork({ disease, genes = [], drugs = [], loading =
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
       <h3 className="mb-3 text-lg font-semibold text-cyan-200">Gene-Drug-Disease Network</h3>
-      <div className="h-80 w-full overflow-hidden rounded-xl bg-slate-950">
+      <div className="h-80 w-full overflow-hidden rounded-xl bg-transparent">
         <ForceGraph2D
           graphData={graphData}
           height={400}

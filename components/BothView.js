@@ -7,6 +7,10 @@ import AlertFeed from "./AlertFeed";
 import GeneNetwork from "./GeneNetwork";
 import OutbreakMap from "./OutbreakMap";
 import TrendChart from "./TrendChart";
+import OutbreakTimeline from "./OutbreakTimeline";
+import FluChart from "./FluChart";
+import RecentResearch from "./RecentResearch";
+import SourceFooter from "./SourceFooter";
 
 function keywordIncludes(text, keyword) {
   if (!keyword) return true;
@@ -50,6 +54,8 @@ export default function BothView({ query, results, loading = false }) {
       <h2 className="text-2xl font-bold text-cyan-100">
         {query?.disease} surveillance - {query?.region}
       </h2>
+
+      <OutbreakTimeline title="Outbreak Alerts" items={alerts} loading={loading} />
 
       <div className="rounded-2xl border border-slate-800 bg-slate-900/70 p-4">
         <h3 className="mb-3 text-lg font-semibold text-cyan-200">WHO Indicators</h3>
@@ -116,6 +122,8 @@ export default function BothView({ query, results, loading = false }) {
         ascending
       />
 
+      <FluChart data={results?.flu?.data} loading={loading} />
+
       <AlertFeed title="Alerts" items={alerts} loading={loading} />
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -176,7 +184,11 @@ export default function BothView({ query, results, loading = false }) {
         </div>
       </div>
 
+      <RecentResearch papers={results?.pubmed?.data} loading={loading} />
+
       <GeneNetwork disease={query?.disease} genes={genes} drugs={drugs} loading={loading} />
+
+      <SourceFooter results={results} />
     </section>
   );
 }

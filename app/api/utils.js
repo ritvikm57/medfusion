@@ -19,11 +19,21 @@ export const COUNTRY_CODE_MAP = {
 };
 
 export const DISEASE_ALIAS_MAP = {
-  influenza: ["influenza", "flu", "seasonal flu", "h1n1", "grippe"],
+  "influenza": ["influenza", "flu", "seasonal flu", "h1n1", "grippe"],
   "covid-19": ["covid", "covid-19", "coronavirus", "sars-cov-2"],
-  dengue: ["dengue", "breakbone fever"],
-  tuberculosis: ["tuberculosis", "tb"],
-  malaria: ["malaria"],
+  "dengue": ["dengue", "dengue fever", "breakbone fever"],
+  "tuberculosis": ["tuberculosis", "tb", "pulmonary tb"],
+  "malaria": ["malaria", "plasmodium"],
+  "cholera": ["cholera", "vibrio cholerae"],
+  "ebola": ["ebola", "ebola virus disease", "evd"],
+  "mpox": ["mpox", "monkeypox"],
+  "zika": ["zika", "zika virus"],
+  "hepatitis": ["hepatitis", "hepatitis a", "hepatitis b", "hepatitis c"],
+  "measles": ["measles", "rubeola"],
+  "typhoid": ["typhoid", "typhoid fever"],
+  "hiv": ["hiv", "aids"],
+  "pneumonia": ["pneumonia"],
+  "diarrhea": ["diarrhea", "diarrhoea"]
 };
 
 export function toISO3(region) {
@@ -69,17 +79,18 @@ export function buildError(source, error) {
 }
 
 export async function safeJsonFetch(url, source, init) {
+  const { timeoutMs = 8000, ...fetchInit } = init || {};
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(url, {
-      ...init,
+      ...fetchInit,
       signal: controller.signal,
       cache: "no-store",
       headers: {
         "Content-Type": "application/json",
-        ...(init?.headers || {}),
+        ...(fetchInit?.headers || {}),
       },
     });
 
@@ -116,4 +127,16 @@ export async function safeTextFetch(url, source, init) {
 
 export function normalizeDisease(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+const _cache = new Map()
+const CACHE_TTL = 5 * 60 * 1000
+export function getCached(key) {
+  const entry = _cache.get(key)
+  if (!entry) return null
+  if (Date.now() - entry.ts > CACHE_TTL) { _cache.delete(key); return null }
+  return entry.data
+}
+export function setCached(key, data) {
+  _cache.set(key, { data, ts: Date.now() })
 }
