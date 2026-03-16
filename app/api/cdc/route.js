@@ -2,29 +2,44 @@
 // Why: CDC open datasets provide tabular surveillance records via Socrata endpoint.
 
 import { NextResponse } from "next/server";
-import { buildError, canonicalizeDisease, combinedKeywordMatch, safeJsonFetch } from "../utils";
+import { canonicalizeDisease, combinedKeywordMatch } from "../utils";
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const disease = canonicalizeDisease(searchParams.get("disease")?.trim());
   const region = searchParams.get("region")?.trim();
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  let rows = [];
   try {
-    const rows = await safeJsonFetch(
-      "https://opendata.ecdc.europa.eu/covid19/nationalcasedeath_eueea_daily_ei/json/",
-      "ecdc",
-      { timeoutMs: 20000 }
+    const res = await fetch(
+      "https://data.cdc.gov/resource/x9gk-5huc.json",
+      { signal: controller.signal, cache: "no-store" }
     );
+    if (res.ok) rows = await res.json();
+  } catch {
+    rows = [];
+  } finally {
+    clearTimeout(timer);
+  }
 
-    const filtered = (rows || []).filter((row) => combinedKeywordMatch(JSON.stringify(row), disease, region));
-
+  if (!rows || rows.length === 0) {
     return NextResponse.json({
-      source: "ecdc",
+      source: "cdc-open-data",
       disease: disease || null,
       region: region || null,
-      data: filtered,
+      data: [],
+      note: "CDC temporarily unavailable",
     });
-  } catch (error) {
-    return NextResponse.json({ source: "ecdc", data: [], note: "ECDC temporarily unavailable" });
   }
+
+  const filtered = rows.filter((row) => combinedKeywordMatch(JSON.stringify(row), disease, region));
+
+  return NextResponse.json({
+    source: "cdc-open-data",
+    disease: disease || null,
+    region: region || null,
+    data: filtered,
+  });
 }
