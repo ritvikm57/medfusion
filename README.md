@@ -323,10 +323,10 @@ Pull requests welcome. For major changes, open an issue first describing the fea
 
 ## Team
 
-- Ritvik Mittal (SE24UCSE225)
-- Charvi Bayana (SE24UCSE119)
-- TVNS Saicharan (SE25UCSE071)
-- Akanksha Duvvuri (SE25UCSE070)
+- Ritvik Mittal (SE24UCSE225) - Project Manager & Frontend and Backend Developer 
+- Charvi Bayana (SE24UCSE119) - Backend Developer
+- TVNS Saicharan (SE25UCSE071) - Backend Developer
+- Akanksha Duvvuri (SE25UCSE070) - Frontend Developer (UI/UX)
 
 ## License
 
