@@ -161,6 +161,85 @@ GET /api/search?disease=dengue&region=India
 
 ## Architecture
 
+```mermaid
+graph TB
+    USER(["User / Browser"])
+
+    subgraph FRONTEND["Next.js 16 Frontend"]
+        SB["Search bar"]
+        LM["Leaflet map"]
+        RC["Recharts"]
+        GN["Gene network"]
+    end
+
+    AGG["/api/search — master aggregator\nPromise.allSettled · 5-min cache · 3 query modes"]
+
+    subgraph APIROUTES["API Routes"]
+        R1["/api/disease"]
+        R2["/api/who"]
+        R3["/api/flu"]
+        R4["/api/alerts"]
+        R5["/api/genes"]
+        R6["/api/drugs"]
+        R7["+7 more"]
+    end
+
+    subgraph SOURCES["External Sources"]
+        S1["Disease.sh\nCOVID stats"]
+        S2["WHO GHO\nOData API"]
+        S3["Delphi CMU\nFluView"]
+        S4["WHO RSS\nHealthMap"]
+        S5["Open Targets\nGraphQL"]
+        S6["PubChem\nPUG-REST"]
+        S7["+7 more\nsources"]
+    end
+
+    subgraph INFRA["Infrastructure"]
+        FT["Fault tolerance\nPromise.allSettled — one source failing\nnever crashes the dashboard"]
+        QM["3 query modes\ndisease only · region only · both\nmode-specific aggregation logic"]
+    end
+
+    USER --> FRONTEND
+    FRONTEND --> AGG
+    AGG --> R1 & R2 & R3 & R4 & R5 & R6 & R7
+    R1 --> S1
+    R2 --> S2
+    R3 --> S3
+    R4 --> S4
+    R5 --> S5
+    R6 --> S6
+    R7 --> S7
+
+    style USER fill:#3a3f4b,stroke:#5a6070,color:#e0e8f0
+    style FRONTEND fill:#1a3a6e,stroke:#2e5cb8,color:#cce0ff
+    style SB fill:#1e4a8a,stroke:#3a6acc,color:#b0d0ff
+    style LM fill:#1e4a8a,stroke:#3a6acc,color:#b0d0ff
+    style RC fill:#1e4a8a,stroke:#3a6acc,color:#b0d0ff
+    style GN fill:#1e4a8a,stroke:#3a6acc,color:#b0d0ff
+    style AGG fill:#3a1e7a,stroke:#6a3acc,color:#d0c0ff
+    style APIROUTES fill:#0a2a1a,stroke:#1a5a30,color:#80e0a0
+    style R1 fill:#0d3a1e,stroke:#1e6a38,color:#70d090
+    style R2 fill:#0d3a1e,stroke:#1e6a38,color:#70d090
+    style R3 fill:#0d3a1e,stroke:#1e6a38,color:#70d090
+    style R4 fill:#0d3a1e,stroke:#1e6a38,color:#70d090
+    style R5 fill:#0d3a1e,stroke:#1e6a38,color:#70d090
+    style R6 fill:#0d3a1e,stroke:#1e6a38,color:#70d090
+    style R7 fill:#0d3a1e,stroke:#1e6a38,color:#70d090
+    style SOURCES fill:#082008,stroke:#145a20,color:#60d080
+    style S1 fill:#0a2a0a,stroke:#1a5a1a,color:#50c070
+    style S2 fill:#0a2a0a,stroke:#1a5a1a,color:#50c070
+    style S3 fill:#0a2a0a,stroke:#1a5a1a,color:#50c070
+    style S4 fill:#0a2a0a,stroke:#1a5a1a,color:#50c070
+    style S5 fill:#0a2a0a,stroke:#1a5a1a,color:#50c070
+    style S6 fill:#0a2a0a,stroke:#1a5a1a,color:#50c070
+    style S7 fill:#0a2a0a,stroke:#1a5a1a,color:#50c070
+    style INFRA fill:#1a1a1a,stroke:#333,color:#888
+    style FT fill:#141414,stroke:#2a2a2a,color:#606060
+    style QM fill:#141414,stroke:#2a2a2a,color:#606060
+```
+
+**Legend:** 🔵 Frontend &nbsp; 🟣 Aggregator &nbsp; 🟢 API routes &nbsp; 🌿 External sources &nbsp; ⬜ User
+
 ### Data Flow
 ```
 User Query 
